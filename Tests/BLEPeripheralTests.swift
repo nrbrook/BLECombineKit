@@ -64,14 +64,14 @@ class BLEPeripheralTests: XCTestCase {
     func testConnectCallsCentralManagerToConnectPeripheralAndReturnsWhenConnectionStateIsTrue() throws {
         // Given
         let expectation = XCTestExpectation(description: #function)
-        var expectedPeripheral: BLEPeripheralState?
+        var expectedPeripheral: BLETrackedPeripheral?
         
         // When
         sut.connect(with: nil)
             .sink(receiveCompletion: { completion in
                 expectation.fulfill()
             }, receiveValue: { peripheral in
-                expectedPeripheral = peripheral as? BLEPeripheralState
+                expectedPeripheral = peripheral as? BLETrackedPeripheral
             })
             .store(in: &disposable)
         sut.connectionState.send(true)
@@ -291,7 +291,8 @@ class BLEPeripheralTests: XCTestCase {
         // When
         sut.writeValue(Data(), for: mutableCharacteristic, type: .withResponse)
             .sink(receiveCompletion: { completion in
-                if case .failure(let error) = completion, case .writeFailed(let error) = error, let error = error as? BLEError, case .unknown = error {
+                if case .failure(let error) = completion, case .writeFailed(let subError) = error,
+                    let bleError = subError as? BLEError, case .unknown = bleError {
                     expectation.fulfill()
                 }
             }, receiveValue: { _ in
@@ -329,9 +330,7 @@ class BLEPeripheralTests: XCTestCase {
                 case .finished:
                     XCTFail("Error should have been returned on completion")
                 }
-            }, receiveValue: { result in
-                XCTFail("No value should have been received")
-            })
+            }, receiveValue: { _ in })
             .store(in: &disposable)
         
         // Then
